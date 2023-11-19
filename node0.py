@@ -14,7 +14,7 @@ edges = [0, 1, 3, 7]
 node_id = 0
 
 
-# costs to nodes
+# costs to node
 def rtinit0():
     global dt, edges
     rtpacket = Rtpkt(0, 0, [edges[0], edges[1], edges[2], edges[3]])
