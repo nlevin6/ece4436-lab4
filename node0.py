@@ -28,7 +28,6 @@ def rtinit0():
     dt.costs[node_id][2] = edges[2]
     dt.costs[node_id][3] = edges[3]
 
-    # For each neighbor source is "me" (must change in other files)
     rtpacket.sourceid = node_id
     rtpacket.mincost[0] = dt.costs[rtpacket.sourceid][0]
     rtpacket.mincost[1] = dt.costs[rtpacket.sourceid][1]
@@ -98,6 +97,7 @@ def printdt0(dtptr):
           (dtptr.costs[2][1], dtptr.costs[2][2], dtptr.costs[2][3]))
     print("     3|  %3d   %3d   %3d\n" %
           (dtptr.costs[3][1], dtptr.costs[3][2], dtptr.costs[3][3]))
+
 
 # handler for changes in link costs. gets called when link cost between node 0 and other nodes changes
 def linkhandler0(linkid, newcost):
