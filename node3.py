@@ -28,7 +28,6 @@ def rtinit3():
     dt.costs[node_id][2] = edges[2]
     dt.costs[node_id][3] = edges[3]
 
-    # For each neighbor source is "me" (must change in other files)
     rtpacket.sourceid = node_id
     rtpacket.mincost[0] = dt.costs[rtpacket.sourceid][0]
     rtpacket.mincost[1] = dt.costs[rtpacket.sourceid][1]
