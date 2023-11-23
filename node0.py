@@ -11,80 +11,77 @@ dt = DistanceTable()
 
 # modify this statement for different node
 edges = [0, 1, 3, 7]
+min_costs = [0, 0, 0, 0]  # new min costs will be stored and overwritten here each time
 node_id = 0
+pkt0 = [Rtpkt(0, i, [0, 0, 0, 0]) for i in range(4)]
 
 
-# costs to node
+def sendpkt():
+    global pkt0, min_costs
+    # make the packets
+    for i in range(4):
+        pkt0[i].sourceid = node_id
+        pkt0[i].destid = i
+        pkt0[i].mincost = min_costs[:]
+
+    # send the packets
+    for i in range(4):
+        if i != node_id:  # if not sending to itself
+            tolayer2(pkt0[i])
+            print(f"At time t={clocktime:.3f}, node {pkt0[i].sourceid} sends packet to node {pkt0[i].destid} with: "
+                  f"({pkt0[i].mincost[0]}  {pkt0[i].mincost[1]}  {pkt0[i].mincost[2]}  {pkt0[i].mincost[3]})")
+
+
+# this function calculates the min costs and sends the packets
+def calc_send_pkt():
+    global min_costs
+    old_min_costs = min_costs.copy()  # make a copy of the old min costs
+    for i in range(4):
+        min_costs[i] = min(dt.costs[i])  # calculate the new min costs
+        if old_min_costs[i] != min_costs[i]:  # if the new min costs are different from the old ones, send the packet
+            sendpkt()
+        else:
+            print(f"minimum costs of node {i} did not change, no packet sent")
+
+
 def rtinit0():
     global dt, edges
-    rtpacket = Rtpkt(0, 0, [edges[0], edges[1], edges[2], edges[3]])
-
-    for j in range(4):
-        for k in range(4):
-            dt.costs[j][k] = 999
-
-    dt.costs[node_id][0] = edges[0]
-    dt.costs[node_id][1] = edges[1]
-    dt.costs[node_id][2] = edges[2]
-    dt.costs[node_id][3] = edges[3]
-
-    rtpacket.sourceid = node_id
-    rtpacket.mincost[0] = dt.costs[rtpacket.sourceid][0]
-    rtpacket.mincost[1] = dt.costs[rtpacket.sourceid][1]
-    rtpacket.mincost[2] = dt.costs[rtpacket.sourceid][2]
-    rtpacket.mincost[3] = dt.costs[rtpacket.sourceid][3]
-
+    print(f"rtinit0() called at {clocktime}\n")
     for i in range(4):
-        if i != rtpacket.sourceid and dt.costs[rtpacket.sourceid][i] != 999:
-            rtpacket.destid = i
-            tolayer2(rtpacket)
+        for j in range(4):
+            if i == j:
+                dt.costs[i][j] = edges[i]  # set the diagonal to the edges
+            else:
+                dt.costs[i][j] = 999
 
-    print(f"rtinit{rtpacket.sourceid} called at {clocktime}\n")
     printdt0(dt)  # print the distance table after initialization
+
+    # calculate min costs
+    for i in range(4):
+        min_costs[i] = min(dt.costs[i])
+
+    # send packets
+    sendpkt()
 
 
 def rtupdate0(rcvdpkt):
     global dt
-    rtpacket = Rtpkt(0, 0, [dt.costs[0][0], dt.costs[0][1], dt.costs[0][2], dt.costs[0][3]])
+    src, dest, mincost = rcvdpkt.sourceid, rcvdpkt.destid, rcvdpkt.mincost
+    print(f"rtupdate0() is called at time t=: {clocktime:.3f} as node {src} sent a pkt with: "
+          f"({mincost[0]} {mincost[1]} {mincost[2]} {mincost[3]})")
 
-    v = rcvdpkt.sourceid
-    x = node_id
-    DV_Changed = False
+    # update distance table
+    for i in range(4):
+        # POTENTIAL new distance is the min cost of the sender + the distance from the sender to the current node
+        possible_new_dist = mincost[i] + dt.costs[src][src]
+        if possible_new_dist < 999:  # if the new distance is less than infinity
+            dt.costs[i][src] = possible_new_dist  # update the distance table
+        else:
+            dt.costs[i][src] = 999
 
-    # Update the location in my cost table
-    dt.costs[v][0] = rcvdpkt.mincost[0]
-    dt.costs[v][1] = rcvdpkt.mincost[1]
-    dt.costs[v][2] = rcvdpkt.mincost[2]
-    dt.costs[v][3] = rcvdpkt.mincost[3]
+    printdt0(dt)  # print the distance table after updating
 
-    c_v_x = dt.costs[x][v]
-
-    for y in range(4):
-        if y != x:
-            D_x_y = dt.costs[x][y]
-            D_v_y = dt.costs[v][y]
-            new_D_x_y = c_v_x + D_v_y
-
-            if new_D_x_y < D_x_y:
-                dt.costs[x][y] = new_D_x_y
-                DV_Changed = True
-    print(f"rtupdate{node_id} called at {clocktime}")
-    print(f"Node {node_id} received packet from node {rcvdpkt.sourceid}")
-
-    if DV_Changed:
-        rtpacket.sourceid = node_id
-        rtpacket.mincost[0] = dt.costs[rtpacket.sourceid][0]
-        rtpacket.mincost[1] = dt.costs[rtpacket.sourceid][1]
-        rtpacket.mincost[2] = dt.costs[rtpacket.sourceid][2]
-        rtpacket.mincost[3] = dt.costs[rtpacket.sourceid][3]
-
-        for i in range(4):
-            if i != rtpacket.sourceid and dt.costs[rtpacket.sourceid][i] != 999:
-                rtpacket.destid = i
-                tolayer2(rtpacket)
-
-    print(f"Node {node_id}'s distance table has been updated.")
-    printdt0(dt)  # Add this line to print the distance table after an update
+    calc_send_pkt()
 
 
 def printdt0(dtptr):
@@ -101,17 +98,13 @@ def printdt0(dtptr):
 
 # handler for changes in link costs. gets called when link cost between node 0 and other nodes changes
 def linkhandler0(linkid, newcost):
-    global dt, node_id
-    print(f"Link cost from node {node_id} to node {linkid} changed to {newcost}")
+    global dt
+    # old distance from node 0 to other nodes via linkid
+    old_dist = [dt.costs[i][linkid] - dt.costs[linkid][linkid] for i in range(4)]
+    new_dist = newcost
 
-    # update the distance table
-    dt.costs[node_id][linkid] = newcost
-
-    # send the new distance vector to all neighbors
     for i in range(4):
-        if i != node_id:
-            pkt = Rtpkt(node_id, i, dt.costs[node_id])
-            tolayer2(pkt)
+        dt.costs[i][linkid] = new_dist + old_dist[i]  # update the distance table
 
-    print(f"Node {node_id}'s distance table has been updated.")
     printdt0(dt)
+    calc_send_pkt()
