@@ -1,4 +1,5 @@
-from utils import TRACE, YES, NO, Rtpkt, tolayer2, clocktime
+import utils
+from utils import TRACE, YES, NO, Rtpkt, tolayer2
 
 
 class DistanceTable:
@@ -28,7 +29,7 @@ def sendpkt():
     for i in range(4):
         if i != node_id and i != 1:  # if not sending to itself and not to node 1
             tolayer2(pkt3[i])
-            print(f"At time t={clocktime:.3f}, node {pkt3[i].sourceid} sends packet to node {pkt3[i].destid} with: "
+            print(f"At time t={utils.clocktime:.3f}, node {pkt3[i].sourceid} sends packet to node {pkt3[i].destid} with: "
                   f"({pkt3[i].mincost[0]}  {pkt3[i].mincost[1]}  {pkt3[i].mincost[2]}  {pkt3[i].mincost[3]})")
 
 
@@ -46,7 +47,7 @@ def calc_send_pkt():
 # costs to nodes
 def rtinit3():
     global dt, edges
-    print(f"rtinit0() called at {clocktime}\n")
+    print(f"rtinit0() called at {utils.clocktime}\n")
     for i in range(4):
         for j in range(4):
             if i == j:
@@ -67,7 +68,7 @@ def rtinit3():
 def rtupdate3(rcvdpkt):
     global dt
     src, dest, mincost = rcvdpkt.sourceid, rcvdpkt.destid, rcvdpkt.mincost
-    print(f"rtupdate0() is called at time t=: {clocktime:.3f} as node {src} sent a pkt with: "
+    print(f"rtupdate0() is called at time t=: {utils.clocktime:.3f} as node {src} sent a pkt with: "
           f"({mincost[0]} {mincost[1]} {mincost[2]} {mincost[3]})")
 
     # update distance table
